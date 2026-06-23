@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Flip Kids</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+    .perspective { perspective: 1000px; }
+    .card-inner { transition: transform 0.5s; transform-style: preserve-3d; }
+    .card-inner.flipped { transform: rotateY(180deg); }
+    .card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .card-back { transform: rotateY(180deg); }
+    .page { display: none; }
+    .page.active { display: flex; }
+  </style>
+</head>
+<body class="min-h-screen overflow-x-hidden bg-sky-200">
+
+  <!-- HOME -->
+  <div id="page-home" class="page active flex-col items-center justify-center w-full px-4 min-h-screen bg-gradient-to-b from-sky-400 to-green-300">
+    <div class="text-center">
+      <h1 class="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight">MEMORY FLIP KIDS</h1>
+      <p class="mt-2 text-white font-extrabold text-xl md:text-2xl drop-shadow-md tracking-wide">LEARNING THROUGH PLAY</p>
+    </div>
+    <button class="mt-8 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 text-3xl md:text-5xl font-black px-16 py-4 rounded-full border-b-[8px] border-yellow-600 active:border-b-0 active:translate-y-2 transition-all shadow-xl" onclick="showPage('page-categories')">PLAY</button>
+    <img src="https://i.imgur.com/w2MbMd2.png" alt="Maskot" class="mt-12 w-96 h-auto opacity-95 drop-shadow-2xl">
+  </div>
+
+  <!-- CATEGORIES -->
+  <div id="page-categories" class="page flex-col items-center justify-center w-full px-4 min-h-screen bg-gradient-to-b from-sky-400 to-green-300">
+    <h1 class="text-4xl md:text-5xl font-black text-white drop-shadow-lg mb-8">PILIH KATEGORI</h1>
+    <div id="cat-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl mb-8"></div>
+    <button class="bg-white text-red-500 font-black text-lg px-8 py-3 rounded-full shadow-lg border-b-4 border-red-200 active:border-b-0 active:translate-y-1 transition-all" onclick="showPage('page-home')">KEMBALI</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="page-game" class="page flex-col p-4 w-full min-h-screen bg-blue-50">
+    <div class="flex justify-between items-center mb-6 max-w-2xl mx-auto w-full">
+      <button class="p-3 bg-white text-blue-500 rounded-xl shadow-sm font-bold border-2" onclick="showPage('page-home')">KELUAR</button>
+      <div id="game-header-label" class="font-extrabold text-blue-600 uppercase bg-white px-6 py-2 rounded-full shadow-sm border-2 border-blue-100 text-xl"></div>
+      <div class="bg-white px-4 py-2 rounded-xl border-2 border-red-200 shadow-sm">
+        <span class="text-red-500 font-bold">SALAH:</span> <span id="mistakes-count" class="text-red-500 font-bold text-xl">0</span>
+      </div>
+    </div>
+    <div class="flex-1 flex items-center justify-center">
+      <div id="board" class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-2xl w-full"></div>
+    </div>
+  </div>
+
+  <!-- VICTORY -->
+  <div id="page-victory" class="page flex-col items-center justify-center p-6 w-full min-h-screen bg-green-50">
+    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full text-center border-4 border-green-400">
+      <div class="text-7xl mb-4">🏆</div>
+      <h1 class="text-4xl font-extrabold text-green-600 mb-4">HEBAT!</h1>
+      <div id="stars-container" class="flex justify-center gap-2 mb-6 text-5xl"></div>
+      <div id="victory-stats" class="bg-blue-100 rounded-xl p-4 mb-8 border-2 border-blue-200 font-bold"></div>
+      <button class="w-full bg-green-400 text-white p-4 rounded-2xl font-bold text-xl mb-4" onclick="replayGame()">MAIN LAGI</button>
+      <button class="w-full bg-blue-400 text-white p-4 rounded-2xl font-bold text-xl" onclick="showPage('page-home')">KE MENU UTAMA</button>
+    </div>
+  </div>
+
+  <script>
+    const CATEGORIES = {
+      Animals: [{word:'DOG',img:'https://i.imgur.com/1nljOyA.png'}, {word:'CAT',img:'https://i.imgur.com/FVTHuBA.png'}, {word:'COW',img:'https://i.imgur.com/xPvy7Sd.png'}],
+      Fruits: [{word:'APPLE',img:'https://i.imgur.com/FBZQ2TD.png'}, {word:'BANANA',img:'https://i.imgur.com/06U0EKl.png'}, {word:'ORANGE',img:'https://i.imgur.com/qTPASZA.png'}]
+    };
+    
+    // Logika permainan sederhana dan bersih
+    let cards=[], flipped=[], matched=new Set(), mistakes=0, timer=null, currentCat=null;
+
+    function showPage(id){
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function buildCats(){
+      const grid=document.getElementById('cat-grid');
+      Object.keys(CATEGORIES).forEach(cat=>{
+        const btn=document.createElement('button');
+        btn.className='p-4 bg-white rounded-full border-b-[6px] border-yellow-400 shadow-lg font-black text-blue-600';
+        btn.textContent=cat;
+        btn.onclick=()=>startGame(cat);
+        grid.appendChild(btn);
+      });
+    }
+
+    function startGame(cat){
+      currentCat=cat;
+      cards=[];
+      CATEGORIES[cat].forEach((item,i)=>{
+        cards.push({id:i,type:'img',content:item.img,word:item.word});
+        cards.push({id:i,type:'word',content:item.word,word:item.word});
+      });
+      cards.sort(()=>Math.random()-0.5);
+      flipped=[]; matched=new Set(); mistakes=0;
+      renderBoard();
+      showPage('page-game');
+    }
+
+    function renderBoard(){
+      const board=document.getElementById('board');
+      board.innerHTML='';
+      cards.forEach((card,idx)=>{
+        const wrap=document.createElement('div');
+        wrap.className='aspect-[4/5] cursor-pointer perspective';
+        wrap.onclick=()=>flip(idx);
+        wrap.innerHTML=`<div class="card-inner w-full h-full rounded-2xl shadow-md"><div class="card-face absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center text-2xl">❓</div><div class="card-face card-back absolute inset-0 bg-white rounded-2xl p-2 flex items-center justify-center font-bold">${card.type==='img'?`<img src="${card.content}" class="w-full h-full object-contain">`:card.content}</div></div>`;
+        board.appendChild(wrap);
+      });
+    }
+
+    function flip(idx){
+      const el=document.querySelectorAll('.card-inner')[idx];
+      el.classList.add('flipped');
+      flipped.push(idx);
+      if(flipped.length===2){
+        if(cards[flipped[0]].id===cards[flipped[1]].id){
+          matched.add(cards[flipped[0]].id);
+          flipped=[];
+        } else {
+          mistakes++;
+          document.getElementById('mistakes-count').textContent=mistakes;
+          setTimeout(()=>{
+            document.querySelectorAll('.card-inner')[flipped[0]].classList.remove('flipped');
+            document.querySelectorAll('.card-inner')[flipped[1]].classList.remove('flipped');
+            flipped=[];
+          }, 1000);
+        }
+      }
+    }
+
+    buildCats();
+  </script>
+</body>
+</html>
